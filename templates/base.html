@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme or 'dark' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KiteTrade{% endblock %} — Paper Trading</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if username %}
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <span class="logo-icon">◈</span>
+            <span class="logo-text">KiteTrade</span>
+        </div>
+        <div class="sidebar-nav">
+            <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+                <span class="nav-icon">⬡</span><span>Dashboard</span>
+            </a>
+            <a href="/market" class="nav-item {% if request.path == '/market' %}active{% endif %}">
+                <span class="nav-icon">◎</span><span>Market</span>
+            </a>
+            <a href="/trade" class="nav-item {% if request.path == '/trade' %}active{% endif %}">
+                <span class="nav-icon">⇄</span><span>Trade</span>
+            </a>
+            <a href="/chart" class="nav-item {% if request.path == '/chart' %}active{% endif %}">
+                <span class="nav-icon">╱╲</span><span>Charts</span>
+            </a>
+            <a href="/orders" class="nav-item {% if request.path == '/orders' %}active{% endif %}">
+                <span class="nav-icon">≡</span><span>Orders</span>
+            </a>
+            <a href="/funds" class="nav-item {% if request.path == '/funds' %}active{% endif %}">
+                <span class="nav-icon">₹</span><span>Funds</span>
+            </a>
+            <a href="/calculator" class="nav-item {% if request.path == '/calculator' %}active{% endif %}">
+                <span class="nav-icon">⊞</span><span>Calculator</span>
+            </a>
+            <a href="/settings" class="nav-item {% if request.path == '/settings' %}active{% endif %}">
+                <span class="nav-icon">⚙</span><span>Settings</span>
+            </a>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-badge">
+                <div class="user-avatar">{{ username[0].upper() }}</div>
+                <div class="user-info">
+                    <span class="user-name">{{ username }}</span>
+                    <span class="user-tag">Paper Trader</span>
+                </div>
+            </div>
+            <a href="/logout" class="logout-btn" title="Logout">⏻</a>
+        </div>
+    </nav>
+    <main class="main-content">
+        <div class="topbar">
+            <div class="topbar-left">
+                <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+            </div>
+            <div class="topbar-right">
+                <div class="market-status" id="marketStatus">
+                    <span class="status-dot"></span>
+                    <span id="marketStatusText">Loading...</span>
+                </div>
+                <div class="topbar-time" id="topbarTime"></div>
+            </div>
+        </div>
+        {% block content %}{% endblock %}
+    </main>
+    {% else %}
+        {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <div id="toast" class="toast hidden"></div>
+
+    <div class="modal-overlay hidden" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="modalConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
