@@ -1,61 +1,62 @@
 from flask import Blueprint, jsonify, session, request
 import yfinance as yf
 from database import get_db
-from nsepython import nseCorporates
 
 market_bp = Blueprint('market', __name__)
 
-# Global cache for NSE stocks
-_NSE_STOCKS_CACHE = None
-
-def get_all_nse_stocks():
-    """Fetch all NSE stocks dynamically"""
-    global _NSE_STOCKS_CACHE
-    
-    if _NSE_STOCKS_CACHE is not None:
-        return _NSE_STOCKS_CACHE
-    
-    try:
-        # Fetch all stocks from NSE
-        stocks_list = nseCorporates()
-        NSE_STOCKS = {}
-        if isinstance(stocks_list, dict):
-            for item in stocks_list.values():
-                if isinstance(item, dict):
-                    symbol = item.get('symbol', '')
-                    name = item.get('company', '')
-                    if symbol and name:
-                        NSE_STOCKS[symbol] = name
-        _NSE_STOCKS_CACHE = NSE_STOCKS
-        return NSE_STOCKS
-    except Exception as e:
-        print(f"Error fetching NSE stocks: {e}")
-        # Fallback to a basic list if API fails
-        return _get_fallback_stocks()
-
-def _get_fallback_stocks():
-    """Fallback stock list in case API fails"""
-    return {
-        "RELIANCE": "Reliance Industries", "TCS": "Tata Consultancy Services",
-        "HDFCBANK": "HDFC Bank", "INFY": "Infosys", "ICICIBANK": "ICICI Bank",
-        "HINDUNILVR": "Hindustan Unilever", "SBIN": "State Bank of India",
-        "BAJFINANCE": "Bajaj Finance", "BHARTIARTL": "Bharti Airtel",
-        "KOTAKBANK": "Kotak Mahindra Bank", "WIPRO": "Wipro", "LT": "Larsen & Toubro",
-        "HCLTECH": "HCL Technologies", "ASIANPAINT": "Asian Paints",
-        "AXISBANK": "Axis Bank", "MARUTI": "Maruti Suzuki", "SUNPHARMA": "Sun Pharmaceutical",
-        "TITAN": "Titan Company", "BAJAJFINSV": "Bajaj Finserv",
-        "ULTRACEMCO": "UltraTech Cement", "NESTLEIND": "Nestle India",
-        "TECHM": "Tech Mahindra", "POWERGRID": "Power Grid Corp",
-        "NTPC": "NTPC", "ONGC": "Oil & Natural Gas", "JSWSTEEL": "JSW Steel",
-        "TATAMOTORS": "Tata Motors", "ADANIENT": "Adani Enterprises",
-        "ADANIPORTS": "Adani Ports", "COALINDIA": "Coal India",
-        "DIVISLAB": "Divi's Laboratories", "DRREDDY": "Dr. Reddy's Laboratories"
-    }
+NSE_STOCKS = {
+    "RELIANCE": "Reliance Industries", "TCS": "Tata Consultancy Services",
+    "HDFCBANK": "HDFC Bank", "INFY": "Infosys", "ICICIBANK": "ICICI Bank",
+    "HINDUNILVR": "Hindustan Unilever", "SBIN": "State Bank of India",
+    "BAJFINANCE": "Bajaj Finance", "BHARTIARTL": "Bharti Airtel",
+    "KOTAKBANK": "Kotak Mahindra Bank", "WIPRO": "Wipro", "LT": "Larsen & Toubro",
+    "HCLTECH": "HCL Technologies", "ASIANPAINT": "Asian Paints",
+    "AXISBANK": "Axis Bank", "MARUTI": "Maruti Suzuki", "SUNPHARMA": "Sun Pharmaceutical",
+    "TITAN": "Titan Company", "BAJAJFINSV": "Bajaj Finserv",
+    "ULTRACEMCO": "UltraTech Cement", "NESTLEIND": "Nestle India",
+    "TECHM": "Tech Mahindra", "POWERGRID": "Power Grid Corp",
+    "NTPC": "NTPC", "ONGC": "Oil & Natural Gas", "JSWSTEEL": "JSW Steel",
+    "TATAMOTORS": "Tata Motors", "ADANIENT": "Adani Enterprises",
+    "ADANIPORTS": "Adani Ports", "COALINDIA": "Coal India",
+    "DIVISLAB": "Divi's Laboratories", "DRREDDY": "Dr. Reddy's Laboratories",
+    "EICHERMOT": "Eicher Motors", "GRASIM": "Grasim Industries",
+    "HEROMOTOCO": "Hero MotoCorp", "HINDALCO": "Hindalco Industries",
+    "INDUSINDBK": "IndusInd Bank", "ITC": "ITC", "M&M": "Mahindra & Mahindra",
+    "BRITANNIA": "Britannia Industries", "CIPLA": "Cipla",
+    "BAJAJ-AUTO": "Bajaj Auto", "TATACONSUM": "Tata Consumer Products",
+    "APOLLOHOSP": "Apollo Hospitals", "BPCL": "Bharat Petroleum",
+    "HDFCLIFE": "HDFC Life Insurance", "SBILIFE": "SBI Life Insurance",
+    "TATASTEEL": "Tata Steel", "UPL": "UPL", "VEDL": "Vedanta",
+    "ZOMATO": "Zomato", "PAYTM": "Paytm", "NYKAA": "Nykaa",
+    "IRCTC": "IRCTC", "HAL": "Hindustan Aeronautics",
+    "PIDILITIND": "Pidilite Industries", "SIEMENS": "Siemens India",
+    "HAVELLS": "Havells India", "DABUR": "Dabur India",
+    "MARICO": "Marico", "COLPAL": "Colgate-Palmolive",
+    "GODREJCP": "Godrej Consumer Products", "BERGEPAINT": "Berger Paints",
+    "ICICIPRULI": "ICICI Prudential", "BANDHANBNK": "Bandhan Bank",
+    "IDFCFIRSTB": "IDFC First Bank", "PNB": "Punjab National Bank",
+    "BANKBARODA": "Bank of Baroda", "CANBK": "Canara Bank",
+    "RECLTD": "REC", "PFC": "Power Finance Corp",
+    "TATAPOWER": "Tata Power", "ADANIGREEN": "Adani Green Energy",
+    "ADANIPOWER": "Adani Power", "ATGL": "Adani Total Gas",
+    "DMART": "Avenue Supermarts", "JUBLFOOD": "Jubilant FoodWorks",
+    "MCDOWELL-N": "United Spirits", "UNITDSPR": "United Spirits",
+    "OFSS": "Oracle Financial Services", "MPHASIS": "Mphasis",
+    "PERSISTENT": "Persistent Systems", "COFORGE": "Coforge",
+    "LTIM": "LTIMindtree", "ZYDUSLIFE": "Zydus Lifesciences",
+    "TORNTPHARM": "Torrent Pharmaceuticals", "AUROPHARMA": "Aurobindo Pharma",
+    "LUPIN": "Lupin", "BIOCON": "Biocon",
+    "MOTHERSON": "Samvardhana Motherson", "BALKRISIND": "Balkrishna Industries",
+    "EXIDEIND": "Exide Industries", "BOSCHLTD": "Bosch",
+    "ASHOKLEY": "Ashok Leyland", "TVSMOTOR": "TVS Motor",
+    "MRF": "MRF", "CUMMINSIND": "Cummins India",
+    "WHIRLPOOL": "Whirlpool India", "VOLTAS": "Voltas",
+    "BLUEDART": "Blue Dart Express", "INDIGO": "IndiGo"
+}
 
 
 def get_live_price(symbol):
     try:
-        NSE_STOCKS = get_all_nse_stocks()
         ticker = yf.Ticker(f"{symbol}.NS")
         info = ticker.fast_info
         price = getattr(info, 'last_price', None)
@@ -78,7 +79,6 @@ def get_live_price(symbol):
             'prev_close': round(float(prev_close), 2) if prev_close else 0.0
         }
     except Exception as e:
-        NSE_STOCKS = get_all_nse_stocks()
         return {'symbol': symbol, 'company_name': NSE_STOCKS.get(symbol, symbol),
                 'price': 0.0, 'change': 0.0, 'change_pct': 0.0, 'prev_close': 0.0}
 
@@ -93,22 +93,13 @@ def search_stocks(query):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     q = query.upper()
-    NSE_STOCKS = get_all_nse_stocks()
     results = []
     for sym, name in NSE_STOCKS.items():
         if q in sym or q in name.upper():
             results.append({'symbol': sym, 'company_name': name})
-        if len(results) >= 20:
+        if len(results) >= 10:
             break
     return jsonify(results)
-
-@market_bp.route('/api/stocks/all')
-def get_all_stocks():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    NSE_STOCKS = get_all_nse_stocks()
-    stocks_list = [{'symbol': sym, 'company_name': name} for sym, name in NSE_STOCKS.items()]
-    return jsonify(stocks_list)
 
 @market_bp.route('/api/stock/chart/<symbol>/<period>')
 def stock_chart(symbol, period):
