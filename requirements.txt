@@ -4,3 +4,5 @@ bcrypt
 flask-cors
 pymysql
 python-dotenv
+gunicorn
+nsepython
