@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Chart{% endblock %}
+{% block page_title %}Charts{% endblock %}
+{% block content %}
+<div class="page-body">
+    <div class="chart-controls-bar">
+        <div class="chart-symbol-search">
+            <input type="text" id="chartSymbol" class="form-input" style="width:180px" placeholder="Symbol" value="{{ symbol }}" oninput="this.value=this.value.toUpperCase()">
+            <button class="btn btn-primary btn-sm" onclick="loadChart()">Load Chart</button>
+        </div>
+        <div id="chartHeader" class="chart-header-info"></div>
+        <div class="chart-period-btns">
+            <button class="period-btn active" onclick="setPeriod('1d', this)">1D</button>
+            <button class="period-btn" onclick="setPeriod('5d', this)">5D</button>
+            <button class="period-btn" onclick="setPeriod('1mo', this)">1M</button>
+            <button class="period-btn" onclick="setPeriod('3mo', this)">3M</button>
+            <button class="period-btn" onclick="setPeriod('1y', this)">1Y</button>
+        </div>
+        <div class="chart-trade-btns">
+            <a id="chartBuyBtn" href="/trade" class="btn btn-sm btn-buy">Buy</a>
+            <a id="chartSellBtn" href="/trade" class="btn btn-sm btn-sell">Sell</a>
+        </div>
+    </div>
+
+    <!-- Indicator toggles -->
+    <div class="indicator-bar">
+        <span class="text-xs text-muted">Indicators:</span>
+        <label class="ind-toggle"><input type="checkbox" id="sma20" onchange="toggleIndicator()"> SMA 20</label>
+        <label class="ind-toggle"><input type="checkbox" id="sma50" onchange="toggleIndicator()"> SMA 50</label>
+        <label class="ind-toggle"><input type="checkbox" id="sma200" onchange="toggleIndicator()"> SMA 200</label>
+        <label class="ind-toggle"><input type="checkbox" id="ema9" onchange="toggleIndicator()"> EMA 9</label>
+        <label class="ind-toggle"><input type="checkbox" id="ema21" onchange="toggleIndicator()"> EMA 21</label>
+    </div>
+
+    <div class="panel" style="padding:0; overflow:hidden">
+        <div id="chartContainer" style="height:520px; width:100%;"></div>
+        <div id="volumeContainer" style="height:120px; width:100%;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-controls-bar { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+.chart-period-btns { display:flex; gap:.3rem; }
+.period-btn { background:var(--card-bg); border:1px solid var(--border); color:var(--text-muted); padding:.3rem .7rem; border-radius:4px; cursor:pointer; font-size:.78rem; font-family:var(--font-mono); transition:all .2s; }
+.period-btn.active, .period-btn:hover { background:var(--accent); color:#000; border-color:var(--accent); }
+.indicator-bar { display:flex; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; }
+.ind-toggle { display:flex; align-items:center; gap:.3rem; font-size:.78rem; color:var(--text-muted); cursor:pointer; }
+.ind-toggle input { accent-color:var(--accent); }
+.chart-header-info { display:flex; gap:1rem; align-items:center; flex:1; }
+.chart-symbol-search { display:flex; gap:.5rem; align-items:center; }
+.chart-trade-btns { display:flex; gap:.5rem; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+let chart, candleSeries, volumeSeries;
+let indicatorSeries = {};
+let chartData = [];
+let currentSymbol = '{{ symbol }}';
+let currentPeriod = '1d';
+let volChart;
+
+function getChartColors() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'light';
+    if (theme === 'light') {
+        return {
+            background: '#f4f6f9',
+            textColor: '#1a1a2e',
+            gridVertColor: 'rgba(0,0,0,0.05)',
+            gridHorzColor: 'rgba(0,0,0,0.05)',
+            borderColor: '#dde2ea'
+        };
+    } else {
+        return {
+            background: '#1a1a1a',
+            textColor: '#e8e8e8',
+            gridVertColor: 'rgba(255,255,255,0.04)',
+            gridHorzColor: 'rgba(255,255,255,0.04)',
+            borderColor: '#333'
+        };
+    }
+}
+
+function initChart() {
+    const container = document.getElementById('chartContainer');
+    const colors = getChartColors();
+    
+    chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: 520,
+        layout: { background: { color: colors.background }, textColor: colors.textColor },
+        grid: { vertLines: { color: colors.gridVertColor }, horzLines: { color: colors.gridHorzColor } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: colors.borderColor, scaleMargins: { top: 0.1, bottom: 0.2 } },
+        timeScale: { borderColor: colors.borderColor, timeVisible: true, secondsVisible: false }
+    });
+
+    candleSeries = chart.addCandlestickSeries({
+        upColor: '#2ecc71', downColor: '#e74c3c',
+        borderUpColor: '#2ecc71', borderDownColor: '#e74c3c',
+        wickUpColor: '#2ecc71', wickDownColor: '#e74c3c'
+    });
+
+    volChart = LightweightCharts.createChart(document.getElementById('volumeContainer'), {
+        width: document.getElementById('volumeContainer').clientWidth,
+        height: 120,
+        layout: { background: { color: colors.background }, textColor: colors.textColor },
+        grid: { vertLines: { color: colors.gridVertColor }, horzLines: { color: colors.gridHorzColor } },
+        rightPriceScale: { scaleMargins: { top: 0.1, bottom: 0 } },
+        timeScale: { borderColor: colors.borderColor, timeVisible: true, secondsVisible: false }
+    });
+
+    volumeSeries = volChart.addHistogramSeries({
+        color: 'rgba(0,212,170,0.3)',
+        priceFormat: { type: 'volume' },
+        priceScaleId: ''
+    });
+
+    window.addEventListener('resize', () => {
+        chart.applyOptions({ width: container.clientWidth });
+        volChart.applyOptions({ width: document.getElementById('volumeContainer').clientWidth });
+    });
+}
+
+function calcSMA(data, period) {
+    return data.map((d, i) => {
+        if (i < period - 1) return null;
+        const avg = data.slice(i - period + 1, i + 1).reduce((s, x) => s + x.close, 0) / period;
+        return { time: d.time, value: parseFloat(avg.toFixed(2)) };
+    }).filter(Boolean);
+}
+
+function calcEMA(data, period) {
+    const k = 2 / (period + 1);
+    let ema = data[0].close;
+    return data.map((d, i) => {
+        if (i === 0) { ema = d.close; return { time: d.time, value: parseFloat(ema.toFixed(2)) }; }
+        ema = d.close * k + ema * (1 - k);
+        return { time: d.time, value: parseFloat(ema.toFixed(2)) };
+    });
+}
+
+const indicatorColors = { sma20:'#f39c12', sma50:'#3498db', sma200:'#9b59b6', ema9:'#e74c3c', ema21:'#00d4aa' };
+
+function toggleIndicator() {
+    // Remove all indicator series
+    Object.values(indicatorSeries).forEach(s => chart.removeSeries(s));
+    indicatorSeries = {};
+    if (!chartData.length) return;
+
+    const configs = [
+        { id:'sma20', fn: d => calcSMA(d, 20) },
+        { id:'sma50', fn: d => calcSMA(d, 50) },
+        { id:'sma200', fn: d => calcSMA(d, 200) },
+        { id:'ema9', fn: d => calcEMA(d, 9) },
+        { id:'ema21', fn: d => calcEMA(d, 21) },
+    ];
+    configs.forEach(cfg => {
+        if (document.getElementById(cfg.id).checked) {
+            const s = chart.addLineSeries({ color: indicatorColors[cfg.id], lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true });
+            s.setData(cfg.fn(chartData));
+            indicatorSeries[cfg.id] = s;
+        }
+    });
+}
+
+async function loadChart() {
+    const symbol = document.getElementById('chartSymbol').value.trim().toUpperCase();
+    if (!symbol) return;
+    currentSymbol = symbol;
+    document.getElementById('chartBuyBtn').href = `/trade?symbol=${symbol}`;
+    document.getElementById('chartSellBtn').href = `/trade?symbol=${symbol}`;
+
+    const [chartRes, priceRes] = await Promise.all([
+        fetch(`/api/stock/chart/${symbol}/${currentPeriod}`),
+        fetch(`/api/stock/price/${symbol}`)
+    ]);
+    const raw = await chartRes.json();
+    const priceData = await priceRes.json();
+
+    if (!raw.length) { showToast('No chart data available', 'error'); return; }
+
+    chartData = raw;
+    candleSeries.setData(raw);
+    volumeSeries.setData(raw.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(46,204,113,0.4)' : 'rgba(231,76,60,0.4)' })));
+    chart.timeScale().fitContent();
+    toggleIndicator();
+
+    const hdr = document.getElementById('chartHeader');
+    const chgClass = priceData.change_pct >= 0 ? 'text-green' : 'text-red';
+    hdr.innerHTML = `
+        <span class="stock-name" style="font-size:1.1rem">${symbol}</span>
+        <span style="font-size:1.4rem;font-weight:700">${fmt(priceData.price)}</span>
+        <span class="${chgClass} text-sm">${priceData.change >= 0 ? '+' : ''}${priceData.change.toFixed(2)} (${priceData.change_pct.toFixed(2)}%)</span>
+        <span class="text-muted text-xs">${priceData.company_name}</span>
+    `;
+}
+
+function setPeriod(period, btn) {
+    currentPeriod = period;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadChart();
+}
+
+initChart();
+loadChart();
+setInterval(loadChart, 60000);
+
+// Reinitialize chart when theme changes
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+            initChart();
+            if (currentSymbol) loadChart();
+        }
+    });
+});
+observer.observe(document.documentElement, { attributes: true });
+</script>
+{% endblock %}
