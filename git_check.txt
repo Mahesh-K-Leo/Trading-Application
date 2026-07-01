@@ -1,0 +1,5 @@
+## master...origin/master [ahead 1]
+?? git_check.txt
+origin	https://github.com/<your-username>/<your-repo>.git (fetch)
+origin	https://github.com/<your-username>/<your-repo>.git (push)
+fatal: unable to access 'https://github.com/<your-username>/<your-repo>.git/': The requested URL returned error: 400
