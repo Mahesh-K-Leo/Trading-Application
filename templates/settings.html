@@ -1,133 +1,87 @@
-{% extends "base.html" %}
-{% block title %}Settings{% endblock %}
-{% block page_title %}Settings{% endblock %}
-{% block content %}
-<div class="page-body" style="max-width:720px">
-
-    <div class="panel">
-        <div class="panel-header"><span class="panel-title">Profile</span></div>
-        <div class="form-group">
-            <label class="form-label">Full Name</label>
-            <input type="text" id="fullName" class="form-input" placeholder="Your full name">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" id="email" class="form-input" placeholder="your@email.com">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Username</label>
-            <input type="text" id="usernameDisp" class="form-input" disabled style="opacity:.5">
-        </div>
-        <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - KiteTrade</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .back-btn { display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #5568d3; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container"><h1>Settings</h1></div>
     </div>
-
-    <div class="panel">
-        <div class="panel-header"><span class="panel-title">Change Password</span></div>
-        <div class="form-group">
-            <label class="form-label">Current Password</label>
-            <input type="password" id="oldPass" class="form-input" placeholder="Enter current password">
+    <div class="container">
+        <a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+        <div class="card">
+            <h3>Profile Settings</h3>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <button type="submit" class="btn">Update Profile</button>
+            </form>
         </div>
-        <div class="form-group">
-            <label class="form-label">New Password</label>
-            <input type="password" id="newPass" class="form-input" placeholder="Min 6 characters">
+        <div class="card">
+            <h3>Change Password</h3>
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="oldPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <button type="submit" class="btn">Change Password</button>
+            </form>
         </div>
-        <div class="form-group">
-            <label class="form-label">Confirm New Password</label>
-            <input type="password" id="confirmPass" class="form-input" placeholder="Repeat new password">
-        </div>
-        <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
-    </div>
-
-    <div class="panel">
-        <div class="panel-header"><span class="panel-title">Appearance</span></div>
-        <div class="theme-toggle-row">
-            <span class="form-label">Theme</span>
-            <div class="theme-options">
-                <label class="radio-btn">
-                    <input type="radio" name="theme" value="dark" onchange="setTheme('dark')">
-                    <span>🌙 Dark</span>
-                </label>
-                <label class="radio-btn">
-                    <input type="radio" name="theme" value="light" onchange="setTheme('light')">
-                    <span>☀️ Light</span>
-                </label>
-            </div>
+        <div class="card">
+            <h3>Danger Zone</h3>
+            <button class="btn btn-danger" onclick="if(confirm('Reset portfolio?')) fetch('/api/reset-portfolio', {method:'POST'}).then(r=>r.json()).then(d=>alert(d.message));">Reset Portfolio</button>
         </div>
     </div>
-
-    <div class="panel panel-danger">
-        <div class="panel-header"><span class="panel-title text-red">Danger Zone</span></div>
-        <div class="danger-desc">
-            Resetting your portfolio will permanently delete all holdings, orders, and transaction history. 
-            Your balance will be restored to <strong>₹10,00,000</strong>. This cannot be undone.
-        </div>
-        <button class="btn btn-danger" onclick="confirmReset()">Reset Portfolio</button>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-async function loadUser() {
-    const user = await fetch('/api/settings/user').then(r => r.json());
-    document.getElementById('fullName').value = user.full_name || '';
-    document.getElementById('email').value = user.email || '';
-    document.getElementById('usernameDisp').value = user.username || '';
-    const theme = user.theme || 'dark';
-    document.querySelector(`input[name="theme"][value="${theme}"]`).checked = true;
-}
-
-async function saveProfile() {
-    const full_name = document.getElementById('fullName').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const res = await fetch('/api/settings/profile', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({full_name, email})
-    });
-    const data = await res.json();
-    data.success ? showToast('Profile updated!', 'success') : showToast(data.error, 'error');
-}
-
-async function changePassword() {
-    const old_password = document.getElementById('oldPass').value;
-    const new_password = document.getElementById('newPass').value;
-    const confirm = document.getElementById('confirmPass').value;
-    if (new_password !== confirm) return showToast('Passwords do not match', 'error');
-    const res = await fetch('/api/settings/password', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({old_password, new_password})
-    });
-    const data = await res.json();
-    if (data.success) {
-        showToast('Password updated!', 'success');
-        document.getElementById('oldPass').value = '';
-        document.getElementById('newPass').value = '';
-        document.getElementById('confirmPass').value = '';
-    } else showToast(data.error, 'error');
-}
-
-async function setTheme(theme) {
-    await fetch('/api/settings/theme', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({theme})
-    });
-    document.documentElement.setAttribute('data-theme', theme);
-    showToast(`${theme === 'dark' ? 'Dark' : 'Light'} theme applied`, 'success');
-}
-
-function confirmReset() {
-    showModal(
-        'Reset Portfolio',
-        'This will delete ALL your trades, holdings, and transaction history. Your balance will be reset to ₹10,00,000. Are you sure?',
-        async () => {
-            const res = await fetch('/api/settings/reset-portfolio', {method:'POST'});
+    <script>
+        fetch('/api/user-profile').then(r=>r.json()).then(d => {
+            document.getElementById('username').value = d.username;
+        });
+        
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/api/update-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: document.getElementById('username').value })
+            });
             const data = await res.json();
-            if (data.success) { showToast('Portfolio reset successfully!', 'success'); setTimeout(() => location.href='/dashboard', 1500); }
-            else showToast(data.error, 'error');
-        }
-    );
-}
-
-loadUser();
-</script>
-{% endblock %}
+            alert(data.message);
+        });
+        
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ old_password: document.getElementById('oldPassword').value, new_password: document.getElementById('newPassword').value })
+            });
+            const data = await res.json();
+            alert(data.message);
+            document.getElementById('passwordForm').reset();
+        });
+    </script>
+</body>
+</html>

@@ -1,246 +1,104 @@
-{% extends "base.html" %}
-{% block title %}Trade{% endblock %}
-{% block page_title %}Place Order{% endblock %}
-{% block content %}
-<div class="page-body">
-    <div class="two-col">
-        <!-- Order Form -->
-        <div class="panel">
-            <div class="panel-header">
-                <span class="panel-title">Order Form</span>
-            </div>
-
-            <!-- Buy/Sell Toggle -->
-            <div class="order-toggle">
-                <button class="toggle-btn active buy-toggle" id="buyBtn" onclick="setOrderType('BUY')">BUY</button>
-                <button class="toggle-btn sell-toggle" id="sellBtn" onclick="setOrderType('SELL')">SELL</button>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Stock Symbol</label>
-                <div class="input-with-btn">
-                    <input type="text" id="symbolInput" class="form-input" placeholder="e.g. RELIANCE" value="{{ symbol }}" oninput="onSymbolChange()" style="text-transform:uppercase">
-                    <button class="btn btn-sm btn-ghost" onclick="fetchPrice()">Fetch</button>
-                </div>
-                <div id="livePriceBox" class="live-price-box hidden">
-                    <div class="live-price-inner">
-                        <span id="liveCompany" class="text-muted text-xs"></span>
-                        <span id="livePrice" class="live-price-val">₹—</span>
-                        <span id="livePriceChg" class="price-chg text-xs"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-row">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade - KiteTrade</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; }
+        .container { max-width: 600px; margin: 20px auto; padding: 0 20px; }
+        .form-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
+        .btn { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: 600; }
+        .btn:hover { background: #5568d3; }
+        .back-btn { display: inline-block; padding: 10px 20px; background: #e5e7eb; color: #333; text-decoration: none; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Place Order</h1>
+        </div>
+    </div>
+    <div class="container">
+        <a href="/market" class="back-btn">← Back</a>
+        <div class="form-card">
+            <form id="orderForm">
                 <div class="form-group">
-                    <label class="form-label">Product Type</label>
-                    <select id="productType" class="form-select" onchange="calcEstimate()">
+                    <label>Stock Symbol</label>
+                    <input type="text" id="symbol" name="symbol" placeholder="e.g., RELIANCE" required>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="quantity" name="quantity" placeholder="100" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" id="price" name="price" placeholder="2500" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Side</label>
+                    <select id="side" name="side" required>
+                        <option value="BUY">Buy</option>
+                        <option value="SELL">Sell</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Product Type</label>
+                    <select id="product_type" name="product_type" required>
                         <option value="CNC">CNC (Delivery)</option>
                         <option value="MIS">MIS (Intraday)</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Price Type</label>
-                    <select id="priceType" class="form-select" onchange="toggleLimitPrice()">
-                        <option value="MARKET">MARKET</option>
-                        <option value="LIMIT">LIMIT</option>
+                    <label>Order Type</label>
+                    <select id="order_type" name="order_type" required>
+                        <option value="MARKET">Market</option>
+                        <option value="LIMIT">Limit</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="form-group" id="limitPriceGroup" style="display:none">
-                <label class="form-label">Limit Price (₹)</label>
-                <input type="number" id="limitPrice" class="form-input" placeholder="Enter limit price" oninput="calcEstimate()">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Quantity</label>
-                <input type="number" id="quantity" class="form-input" placeholder="Number of shares" min="1" oninput="calcEstimate()">
-            </div>
-
-            <!-- Estimate Panel -->
-            <div class="estimate-panel" id="estimatePanel" style="display:none">
-                <div class="estimate-row"><span>Price</span><span id="estPrice">—</span></div>
-                <div class="estimate-row"><span>Quantity</span><span id="estQty">—</span></div>
-                <div class="estimate-row"><span>Order Value</span><span id="estValue">—</span></div>
-                <div class="estimate-row"><span>Brokerage</span><span id="estBrokerage">—</span></div>
-                <div class="estimate-row"><span>Taxes & Charges</span><span id="estCharges">—</span></div>
-                <div class="estimate-row estimate-total"><span>Total <span id="orderTypeLabel">Required</span></span><span id="estTotal">—</span></div>
-            </div>
-
-            <button class="btn btn-primary btn-full" id="placeOrderBtn" onclick="placeOrder()">Place Order</button>
-
-            <div id="orderResult" class="order-result hidden"></div>
-        </div>
-
-        <!-- Holdings for Sell Reference -->
-        <div class="panel">
-            <div class="panel-header">
-                <span class="panel-title">Your Holdings</span>
-                <span class="text-xs text-muted">Click to pre-fill</span>
-            </div>
-            <div id="holdingsRef">
-                <div class="loading-text">Loading...</div>
-            </div>
-            <div class="panel-header" style="margin-top:1.5rem">
-                <span class="panel-title">Available Funds</span>
-            </div>
-            <div class="funds-info-box">
-                <span>Equity</span>
-                <span id="availFundsRef" class="price-val">₹—</span>
-            </div>
+                <button type="submit" class="btn">Place Order</button>
+            </form>
         </div>
     </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-let currentOrderType = 'BUY';
-let currentPrice = 0;
-
-function setOrderType(type) {
-    currentOrderType = type;
-    document.getElementById('buyBtn').classList.toggle('active', type === 'BUY');
-    document.getElementById('sellBtn').classList.toggle('active', type === 'SELL');
-    document.getElementById('orderTypeLabel').textContent = type === 'BUY' ? 'Required' : 'You Receive';
-    document.getElementById('placeOrderBtn').textContent = type === 'BUY' ? 'Buy →' : 'Sell →';
-    document.getElementById('placeOrderBtn').className = `btn btn-full ${type === 'BUY' ? 'btn-buy' : 'btn-sell'}`;
-    calcEstimate();
-}
-
-function toggleLimitPrice() {
-    const show = document.getElementById('priceType').value === 'LIMIT';
-    document.getElementById('limitPriceGroup').style.display = show ? 'block' : 'none';
-}
-
-function onSymbolChange() {
-    const v = document.getElementById('symbolInput').value.toUpperCase();
-    document.getElementById('symbolInput').value = v;
-    document.getElementById('livePriceBox').classList.add('hidden');
-    currentPrice = 0;
-}
-
-async function fetchPrice() {
-    const symbol = document.getElementById('symbolInput').value.trim().toUpperCase();
-    if (!symbol) return showToast('Enter a symbol', 'error');
-    const res = await fetch(`/api/stock/price/${symbol}`);
-    const data = await res.json();
-    if (!data.price) return showToast('Symbol not found or market closed', 'error');
-    currentPrice = data.price;
-    document.getElementById('livePriceBox').classList.remove('hidden');
-    document.getElementById('liveCompany').textContent = data.company_name;
-    document.getElementById('livePrice').textContent = fmt(data.price);
-    const chg = document.getElementById('livePriceChg');
-    chg.textContent = `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} (${data.change_pct.toFixed(2)}%)`;
-    chg.className = `price-chg text-xs ${data.change_pct >= 0 ? 'text-green' : 'text-red'}`;
-    calcEstimate();
-}
-
-function calcEstimate() {
-    const qty = parseInt(document.getElementById('quantity').value) || 0;
-    const priceType = document.getElementById('priceType').value;
-    const productType = document.getElementById('productType').value;
-    const limitPrice = parseFloat(document.getElementById('limitPrice').value) || 0;
-    const price = priceType === 'LIMIT' ? limitPrice : currentPrice;
-
-    if (!price || !qty) { document.getElementById('estimatePanel').style.display = 'none'; return; }
-
-    const orderValue = price * qty;
-    const brokerage = productType === 'MIS' ? Math.min(20, orderValue * 0.0003) : 0;
-    const stt = productType === 'CNC' ? orderValue * 0.001 : orderValue * 0.00025;
-    const exchg = orderValue * 0.0000335;
-    const gst = (brokerage + exchg) * 0.18;
-    const sebi = orderValue * 0.000001;
-    const stamp = productType === 'CNC' ? orderValue * 0.00015 : orderValue * 0.00003;
-    const totalCharges = brokerage + stt + exchg + gst + sebi + stamp;
-    const total = currentOrderType === 'BUY' ? orderValue + totalCharges : orderValue - totalCharges;
-
-    document.getElementById('estimatePanel').style.display = 'block';
-    document.getElementById('estPrice').textContent = fmt(price);
-    document.getElementById('estQty').textContent = qty;
-    document.getElementById('estValue').textContent = fmt(orderValue);
-    document.getElementById('estBrokerage').textContent = fmt(brokerage);
-    document.getElementById('estCharges').textContent = fmt(totalCharges);
-    document.getElementById('estTotal').textContent = fmt(total);
-}
-
-async function placeOrder() {
-    const symbol = document.getElementById('symbolInput').value.trim().toUpperCase();
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const productType = document.getElementById('productType').value;
-    const priceType = document.getElementById('priceType').value;
-    const limitPrice = parseFloat(document.getElementById('limitPrice').value) || 0;
-
-    if (!symbol || !quantity) return showToast('Fill in all fields', 'error');
-    if (priceType === 'LIMIT' && !limitPrice) return showToast('Enter limit price', 'error');
-
-    const btn = document.getElementById('placeOrderBtn');
-    btn.disabled = true;
-    btn.textContent = 'Placing...';
-
-    const res = await fetch('/api/order/place', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({symbol, order_type: currentOrderType, product_type: productType, price_type: priceType, quantity, limit_price: limitPrice})
-    });
-    const data = await res.json();
-    btn.disabled = false;
-    setOrderType(currentOrderType);
-
-    const resultEl = document.getElementById('orderResult');
-    resultEl.classList.remove('hidden');
-    if (data.success) {
-        resultEl.className = 'order-result order-success';
-        resultEl.innerHTML = `✓ ${data.message}<br><small>Charges: ${fmt(data.total_charges)}</small>`;
-        showToast(data.message, 'success');
-        loadHoldings();
-    } else {
-        resultEl.className = 'order-result order-error';
-        resultEl.textContent = '✗ ' + (data.error || 'Order failed');
-        showToast(data.error, 'error');
-    }
-}
-
-async function loadHoldings() {
-    const [holdings, portfolio] = await Promise.all([
-        fetch('/api/holdings').then(r => r.json()),
-        fetch('/api/portfolio').then(r => r.json())
-    ]);
-    document.getElementById('availFundsRef').textContent = fmt(portfolio.available_funds || 0);
-    const el = document.getElementById('holdingsRef');
-    if (!holdings.length) {
-        el.innerHTML = '<div class="empty-row">No holdings.</div>';
-        return;
-    }
-    el.innerHTML = holdings.map(h => `
-        <div class="holding-ref-row" onclick="prefillSell('${h.symbol}', ${h.quantity}, ${h.avg_buy_price})">
-            <div>
-                <span class="stock-name">${h.symbol}</span>
-                <span class="badge-neutral ml-1">${h.product_type}</span>
-            </div>
-            <div class="text-right">
-                <div>${fmt(h.ltp)}</div>
-                <div class="text-xs text-muted">Qty: ${h.quantity} | Avg: ${fmt(h.avg_buy_price)}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function prefillSell(symbol, qty, price) {
-    setOrderType('SELL');
-    document.getElementById('symbolInput').value = symbol;
-    document.getElementById('quantity').value = qty;
-    fetchPrice();
-}
-
-// Auto fetch if symbol passed from URL
-const urlSymbol = new URLSearchParams(window.location.search).get('symbol');
-if (urlSymbol) {
-    document.getElementById('symbolInput').value = urlSymbol.toUpperCase();
-    setTimeout(fetchPrice, 300);
-}
-setOrderType('BUY');
-loadHoldings();
-</script>
-{% endblock %}
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const symbol = urlParams.get('symbol');
+        if (symbol) document.getElementById('symbol').value = symbol;
+        
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                symbol: document.getElementById('symbol').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                price: parseFloat(document.getElementById('price').value),
+                side: document.getElementById('side').value,
+                product_type: document.getElementById('product_type').value,
+                order_type: document.getElementById('order_type').value
+            };
+            
+            try {
+                const res = await fetch('/api/place-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Order placed successfully!');
+                    location.href = '/dashboard';
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                alert('Error placing order');
+            }
+        });
+    </script>
+</body>
+</html>
