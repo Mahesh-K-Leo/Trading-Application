@@ -39,44 +39,44 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html', username=session.get('username'), theme=session.get('theme','dark'))
+    return render_template('dashboard.html', username=session.get('username'), theme=session.get('theme','light'))
 
 @app.route('/market')
 @login_required
 def market():
-    return render_template('market.html', username=session.get('username'), theme=session.get('theme','dark'))
+    return render_template('market.html', username=session.get('username'), theme=session.get('theme','light'))
 
 @app.route('/trade')
 @login_required
 def trade():
     symbol = request.args.get('symbol', '')
-    return render_template('trade.html', username=session.get('username'), theme=session.get('theme','dark'), symbol=symbol)
+    return render_template('trade.html', username=session.get('username'), theme=session.get('theme','light'), symbol=symbol)
 
 @app.route('/chart')
 @login_required
 def chart():
     symbol = request.args.get('symbol', 'RELIANCE')
-    return render_template('chart.html', username=session.get('username'), theme=session.get('theme','dark'), symbol=symbol)
+    return render_template('chart.html', username=session.get('username'), theme=session.get('theme','light'), symbol=symbol)
 
 @app.route('/funds')
 @login_required
 def funds():
-    return render_template('funds.html', username=session.get('username'), theme=session.get('theme','dark'))
+    return render_template('funds.html', username=session.get('username'), theme=session.get('theme','light'))
 
 @app.route('/orders')
 @login_required
 def orders():
-    return render_template('orders.html', username=session.get('username'), theme=session.get('theme','dark'))
+    return render_template('orders.html', username=session.get('username'), theme=session.get('theme','light'))
 
 @app.route('/calculator')
 @login_required
 def calculator():
-    return render_template('calculator.html', username=session.get('username'), theme=session.get('theme','dark'))
+    return render_template('calculator.html', username=session.get('username'), theme=session.get('theme','light'))
 
 @app.route('/settings')
 @login_required
 def settings():
-    return render_template('settings.html', username=session.get('username'), theme=session.get('theme','dark'))
+    return render_template('settings.html', username=session.get('username'), theme=session.get('theme','light'))
 
 if __name__ == '__main__':
     init_db()

@@ -62,17 +62,41 @@ let indicatorSeries = {};
 let chartData = [];
 let currentSymbol = '{{ symbol }}';
 let currentPeriod = '1d';
+let volChart;
+
+function getChartColors() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'light';
+    if (theme === 'light') {
+        return {
+            background: '#f4f6f9',
+            textColor: '#1a1a2e',
+            gridVertColor: 'rgba(0,0,0,0.05)',
+            gridHorzColor: 'rgba(0,0,0,0.05)',
+            borderColor: '#dde2ea'
+        };
+    } else {
+        return {
+            background: '#1a1a1a',
+            textColor: '#e8e8e8',
+            gridVertColor: 'rgba(255,255,255,0.04)',
+            gridHorzColor: 'rgba(255,255,255,0.04)',
+            borderColor: '#333'
+        };
+    }
+}
 
 function initChart() {
     const container = document.getElementById('chartContainer');
+    const colors = getChartColors();
+    
     chart = LightweightCharts.createChart(container, {
         width: container.clientWidth,
         height: 520,
-        layout: { background: { color: 'var(--card-bg, #1a1a1a)' }, textColor: '#aaa' },
-        grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
+        layout: { background: { color: colors.background }, textColor: colors.textColor },
+        grid: { vertLines: { color: colors.gridVertColor }, horzLines: { color: colors.gridHorzColor } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: '#333', scaleMargins: { top: 0.1, bottom: 0.2 } },
-        timeScale: { borderColor: '#333', timeVisible: true, secondsVisible: false }
+        rightPriceScale: { borderColor: colors.borderColor, scaleMargins: { top: 0.1, bottom: 0.2 } },
+        timeScale: { borderColor: colors.borderColor, timeVisible: true, secondsVisible: false }
     });
 
     candleSeries = chart.addCandlestickSeries({
@@ -81,13 +105,13 @@ function initChart() {
         wickUpColor: '#2ecc71', wickDownColor: '#e74c3c'
     });
 
-    const volChart = LightweightCharts.createChart(document.getElementById('volumeContainer'), {
+    volChart = LightweightCharts.createChart(document.getElementById('volumeContainer'), {
         width: document.getElementById('volumeContainer').clientWidth,
         height: 120,
-        layout: { background: { color: 'var(--card-bg, #1a1a1a)' }, textColor: '#aaa' },
-        grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
+        layout: { background: { color: colors.background }, textColor: colors.textColor },
+        grid: { vertLines: { color: colors.gridVertColor }, horzLines: { color: colors.gridHorzColor } },
         rightPriceScale: { scaleMargins: { top: 0.1, bottom: 0 } },
-        timeScale: { borderColor: '#333', timeVisible: true, secondsVisible: false }
+        timeScale: { borderColor: colors.borderColor, timeVisible: true, secondsVisible: false }
     });
 
     volumeSeries = volChart.addHistogramSeries({
@@ -186,5 +210,16 @@ function setPeriod(period, btn) {
 initChart();
 loadChart();
 setInterval(loadChart, 60000);
+
+// Reinitialize chart when theme changes
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+            initChart();
+            if (currentSymbol) loadChart();
+        }
+    });
+});
+observer.observe(document.documentElement, { attributes: true });
 </script>
 {% endblock %}

@@ -118,9 +118,14 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             full_name TEXT,
-            theme TEXT DEFAULT 'dark',
+            theme TEXT DEFAULT 'light',
+            account_type TEXT DEFAULT 'retail',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'account_type' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN account_type TEXT DEFAULT 'retail'")
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS portfolio (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -197,7 +202,8 @@ def init_db():
             email VARCHAR(255) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             full_name VARCHAR(255),
-            theme VARCHAR(20) DEFAULT 'dark',
+            theme VARCHAR(20) DEFAULT 'light',
+            account_type VARCHAR(50) DEFAULT 'retail',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
 

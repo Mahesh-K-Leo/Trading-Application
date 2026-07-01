@@ -36,6 +36,7 @@ def register():
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
+        account_type = request.form.get('account_type', 'retail').strip() or 'retail'
         if not all([full_name, username, email, password]):
             flash('Please fill in all fields.', 'error')
             return render_template('register.html')
@@ -46,8 +47,8 @@ def register():
         conn = get_db()
         try:
             conn.execute(
-                'INSERT INTO users (username, email, password_hash, full_name) VALUES (?,?,?,?)',
-                (username, email, hashed, full_name)
+                'INSERT INTO users (username, email, password_hash, full_name, account_type) VALUES (?,?,?,?,?)',
+                (username, email, hashed, full_name, account_type)
             )
             conn.commit()
             user = conn.execute('SELECT * FROM users WHERE username=?', (username,)).fetchone()
