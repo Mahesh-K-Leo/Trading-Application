@@ -1,7 +1,0 @@
-flask
-yfinance
-bcrypt
-flask-cors
-pymysql
-python-dotenv
-gunicorn
